@@ -11,6 +11,7 @@ type AliHunterResponse struct {
 
 type AliHunterProduct struct {
 	ProductID               string `json:"product_id"`
+	EvaluateRate            string `json:"evaluate_rate"`
 	ProductTitle            string `json:"product_title"`
 	ProductMainImageURL     string `json:"product_main_image_url"`
 	ProductDetailURL        string `json:"product_detail_url"`

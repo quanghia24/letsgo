@@ -116,7 +116,7 @@
               <h4 class="font-medium text-gray-900 mt-2 line-clamp-2">{{$p.ProductTitle}}</h4>
               <div class="mt-2 text-sm text-gray-600 space-y-1">
                 <div><strong class="price-red">{{if $p.TargetSalePrice}}{{formatPrice $p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
-                <div>Rating: - ⭐</div>
+                <div>Rating: {{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</div>
               </div>
               <a href="{{$p.ProductDetailURL}}" target="_blank" class="mt-3 inline-flex items-center text-green-600 hover:text-green-800 font-medium text-sm">
                 View on AliExpress <i class="ml-1 fas fa-external-link-alt"></i>
@@ -147,7 +147,7 @@
             <div class="text-xl text-gray-600">API matches: <strong id="apiCount">0</strong> (<span id="apiPct">0%</span>)</div>
           </div>
           <div class="flex items-center gap-3">
-            <button id="copyBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Copy checked</button>
+            <button id="copyBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Copy to clipboard</button>
             <button id="closeSummary" class="px-3 py-2 bg-gray-200 rounded">Close</button>
           </div>
         </div>
