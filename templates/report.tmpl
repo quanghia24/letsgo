@@ -92,7 +92,7 @@
                 View on platform <i class="ml-1 fas fa-external-link-alt"></i>
               </a>
               <label class="flex items-center gap-2 text-sm p-2">
-                <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-local-{{$i}}" data-col="local" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{$p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductURL}}">
+                <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-local-{{$i}}" data-col="local" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{$p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductURL}}" data-rating="{{if $p.Avgstar}}{{printf "%.1f" $p.Avgstar}}{{else}}0{{end}}">
                 <span>Match Original</span>
               </label>
             </div>
@@ -122,7 +122,7 @@
                 View on AliExpress <i class="ml-1 fas fa-external-link-alt"></i>
               </a>
               <label class="flex items-center gap-2 text-sm p-2">
-                <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-api-{{$i}}" data-col="api" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{formatPrice $p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductDetailURL}}">
+                <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-api-{{$i}}" data-col="api" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{formatPrice $p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductDetailURL}}" data-rating="{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}}">
                 <span>Match Original</span>
               </label>
             </div>
@@ -147,8 +147,10 @@
             <div class="text-xl text-gray-600">API matches: <strong id="apiCount">0</strong> (<span id="apiPct">0%</span>)</div>
           </div>
           <div class="flex items-center gap-3">
-            <button id="copyBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Copy to clipboard</button>
-            <button id="closeSummary" class="px-3 py-2 bg-gray-200 rounded">Close</button>
+            <button id="exportBtn" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-2">
+              <i class="fas fa-download"></i> Export to JSON
+            </button>
+            <button id="closeSummary" class="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">Close</button>
           </div>
         </div>
 
@@ -178,8 +180,11 @@
         const localPctEl = document.getElementById('localPct');
         const apiPctEl = document.getElementById('apiPct');
         const checkedTableBody = document.querySelector('#checkedTable tbody');
-        const copyBtn = document.getElementById('copyBtn');
+        const exportBtn = document.getElementById('exportBtn');
         const closeBtn = document.getElementById('closeSummary');
+
+        // Store the original data from the server
+        const comparisonsData = {{.Comparisons | printf "%#v"}};
 
         function updateState(){
           const localChecked = Array.from(document.querySelectorAll('.match-checkbox[data-col="local"]:checked'));
@@ -232,17 +237,64 @@
         // attach listeners
         document.querySelectorAll('.match-checkbox').forEach(cb => cb.addEventListener('change', updateState));
 
-        copyBtn.addEventListener('click', async () => {
-          const rows = Array.from(checkedTableBody.querySelectorAll('tr')).map(tr => {
-            return Array.from(tr.children).map(td => td.textContent.trim()).join('\t');
-          }).join('\n');
-          try{
-            await navigator.clipboard.writeText(rows);
-            copyBtn.textContent = 'Copied!';
-            setTimeout(()=> copyBtn.textContent = 'Copy to clipboard', 1500);
-          }catch(e){
-            alert('Copy failed: '+e);
-          }
+        exportBtn.addEventListener('click', () => {
+          // Build export data structure
+          const exportData = {
+            total_products: totalQueries,
+            comparisons: []
+          };
+
+          // Get all checkboxes organized by product
+          const productGroups = {};
+          document.querySelectorAll('.match-checkbox').forEach(cb => {
+            const prodId = cb.dataset.productid;
+            if (!productGroups[prodId]) {
+              productGroups[prodId] = {
+                product_id: prodId,
+                image_url: cb.dataset.img,
+                rapidapi_products: [],
+                alihunter_products: []
+              };
+            }
+
+            const productData = {
+              product_title: cb.dataset.title,
+              price: cb.dataset.price,
+              rating: cb.dataset.rating,
+              product_url: cb.dataset.link,
+              matching: cb.checked
+            };
+
+            if (cb.dataset.col === 'local') {
+              productGroups[prodId].rapidapi_products.push(productData);
+            } else {
+              productGroups[prodId].alihunter_products.push(productData);
+            }
+          });
+
+          // Convert to array
+          exportData.comparisons = Object.values(productGroups);
+
+          // Create JSON blob and download
+          const jsonStr = JSON.stringify(exportData, null, 2);
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `comparison.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          // Visual feedback
+          const originalHTML = exportBtn.innerHTML;
+          exportBtn.innerHTML = '<i class="fas fa-check"></i> Exported!';
+          exportBtn.disabled = true;
+          setTimeout(() => {
+            exportBtn.innerHTML = originalHTML;
+            exportBtn.disabled = false;
+          }, 2000);
         });
 
         closeBtn.addEventListener('click', ()=>{ document.querySelectorAll('.match-checkbox').forEach(cb=>cb.checked=false); updateState(); });

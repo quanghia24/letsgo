@@ -21,6 +21,7 @@ type AliHunterProduct struct {
 	SimilarityScore         string `json:"similarity_score"`
 	ShipFrom                string `json:"ship_from"`
 	TargetSalePriceCurrency string `json:"target_sale_price_currency"`
+	Matching                bool   `json:"matching"`
 }
 
 type RapidapiResponse struct {
@@ -47,4 +48,5 @@ type RapidapiProduct struct {
 	TargetSalePrice     string  `json:"targetsaleprice"`
 	TotalReview         string  `json:"totalreview"`
 	Type                string  `json:"type"`
+	Matching            bool    `json:"matching"`
 }
