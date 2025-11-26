@@ -80,7 +80,7 @@ func formatPrice(price string) string {
 	return "$" + price
 }
 
-func GenerateJSONReport(reports []Report) error {
+func GenerateJSONComparisonReport(reports []Report) error {
 	data, err := json.MarshalIndent(reports, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal reports to json: %w", err)
