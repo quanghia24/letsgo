@@ -13,7 +13,7 @@ type RapidAPIConfig struct {
 
 func GetRapidAPIConfig() *RapidAPIConfig {
 	// Try to load .env from the config directory
-	err := godotenv.Load(".env")
+	err := godotenv.Load(".env.example")
 	if err != nil {
 		panic("💥 error loading .env file")
 	}

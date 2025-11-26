@@ -1,6 +1,7 @@
 package report
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"os"
@@ -16,6 +17,7 @@ type ListReports struct {
 
 // Report is the view-model passed to the HTML template
 type Report struct {
+	ProductTitle     string
 	ProductID        int64
 	ImageURL         string
 	ShopID           int64
@@ -76,4 +78,15 @@ func formatPrice(price string) string {
 	}
 	price = price[:len(price)-2] + "." + price[len(price)-2:]
 	return "$" + price
+}
+
+func GenerateJSONReport(reports []Report) error {
+	data, err := json.MarshalIndent(reports, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal reports to json: %w", err)
+	}
+	if err := os.WriteFile("report.json", data, 0644); err != nil {
+		return fmt.Errorf("failed to write json file: %w", err)
+	}
+	return nil
 }

@@ -17,7 +17,7 @@ import (
 func main() {
 	// Parse command-line flags
 	filePath := flag.String("local", "./docs/suggest_products.json", "path to local JSON file with RapidAPI product suggestions")
-	outDir := flag.String("output", "./report.html", "output directory for the generated HTML report")
+	htmlFlag := flag.Bool("html", false, "generate HTML report")
 	flag.Parse()
 
 	fmt.Println("1️⃣ Reading: ", *filePath)
@@ -102,6 +102,7 @@ func main() {
 				resultsChan <- result{
 					index: idx,
 					comparison: report.Report{
+						ProductTitle:     prod.Product.Title,
 						ProductID:        prod.ProductID,
 						ImageURL:         prod.ImageURL,
 						ShopID:           prod.ShopID,
@@ -126,18 +127,24 @@ func main() {
 		results[res.index] = res
 	}
 
-	// Build ordered comparisons list
+	// Build ordered comparisons list -> default behaviour: export to json
 	comparisons := make([]report.Report, total)
 	for i, res := range results {
 		comparisons[i] = res.comparison
 	}
 
+	if err := report.GenerateJSONReport(comparisons); err != nil {
+		log.Fatalf("failed to generate JSON report: %v", err)
+	}
+
 	fmt.Println("⭐ Finished fetching from alihunter API and preparing comparisons")
 
-	// 3. Generates an interactive HTML comparison report
-	fmt.Println("3️⃣ Generating HTML report")
-	if err := report.GenerateHTMLReport(comparisons, *outDir); err != nil {
-		log.Fatalf("failed to generate report: %v", err)
+	// 3. Generates an interactive HTML comparison report: only run on htmlFlag set to true
+	if *htmlFlag {
+		fmt.Println("3️⃣ Generating HTML report")
+		if err := report.GenerateHTMLReport(comparisons, "report.html"); err != nil {
+			log.Fatalf("failed to generate report: %v", err)
+		}
+		fmt.Println("⭐ Report successfully generated and saved to:", "report.html")
 	}
-	fmt.Println("⭐ Report successfully generated and saved to:", *outDir)
 }

@@ -7,7 +7,7 @@ Features concurrent processing with goroutines for fast performance.
 **Usage:**
 
 ```Bash
-go run . -local <products.json> -output <report.html>
+go run . -local <products.json> -html <true>
 ```
 
 ---
