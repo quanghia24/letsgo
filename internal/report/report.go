@@ -16,19 +16,20 @@ type ListReports struct {
 
 // Report is the view-model passed to the HTML template
 type Report struct {
-	ProductID        string
+	ProductID        int64
 	ImageURL         string
-	LocalRapidAPITop []model.RapidapiProduct
+	ShopID           int64
+	LocalRapidAPITop []model.ProductItem
 	AliHunterTop     []model.AliHunterProduct
 	AliExpressTop    []model.AliExpressProduct
 }
 
-func TakeTopProducts(input []model.RapidapiProduct) []model.RapidapiProduct {
-	var res []model.RapidapiProduct
+func TakeTopProducts(input []model.ProductItem) []model.ProductItem {
+	var res []model.ProductItem
 	len := 0
 
 	for _, item := range input {
-		if len < 3 && item.ProductMainImageURL != "" {
+		if len < 3 && item.ProductMainImageURL != "" && item.Sale > 0 {
 			res = append(res, item)
 			len++
 		} else {

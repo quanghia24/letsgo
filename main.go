@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	// 1. read JSON file path from flag
+	// Parse command-line flags
 	filePath := flag.String("local", "./docs/suggest_products.json", "path to local JSON file with RapidAPI product suggestions")
 	outDir := flag.String("output", "./report.html", "output directory for the generated HTML report")
 	flag.Parse()
@@ -25,8 +25,8 @@ func main() {
 	if err != nil {
 		log.Fatal("cannot read local json file:", err)
 	}
-	var rapidapiResponses []model.RapidapiResponse
-	if err := json.Unmarshal(fileBytes, &rapidapiResponses); err != nil {
+	var ShopGroupResponses []model.ShopGroup
+	if err := json.Unmarshal(fileBytes, &ShopGroupResponses); err != nil {
 		log.Fatal("cannot unmarshal json data:", err)
 	}
 	fmt.Println("⭐ Done reading JSON file")
@@ -39,67 +39,80 @@ func main() {
 		comparison report.Report
 	}
 
-	total := len(rapidapiResponses)
+	// Calculate total products across all shops
+	total := 0
+	for _, shop := range ShopGroupResponses {
+		total += len(shop.SuggestionProducts)
+	}
+
 	results := make([]result, total)
 	resultsChan := make(chan result, total)
 	sem := make(chan struct{}, 5) // semaphore limit to 5 concurrent requests, not to overwhelm the APIs
 	var wg sync.WaitGroup
 
-	// Process each product concurrently
-	for i, item := range rapidapiResponses {
-		wg.Add(1)
-		go func(idx int, product model.RapidapiResponse) {
-			defer wg.Done()
-			sem <- struct{}{}        // Acquire semaphore
-			defer func() { <-sem }() // Release semaphore
+	// Use a global index counter
+	globalIdx := 0
+	for _, shop := range ShopGroupResponses {
+		for _, product := range shop.SuggestionProducts {
+			wg.Add(1)
+			currIndex := globalIdx // index for storing result in order
+			globalIdx++
 
-			var aliHunterProducts []model.AliHunterProduct
-			var aliexpressProducts []model.AliExpressProduct
-			var innerWg sync.WaitGroup
+			go func(idx int, prod model.SuggestionProduct) {
+				defer wg.Done()
+				sem <- struct{}{}        // Acquire semaphore
+				defer func() { <-sem }() // Release semaphore
 
-			innerWg.Add(2)
+				var aliHunterProducts []model.AliHunterProduct
+				var aliexpressProducts []model.AliExpressProduct
+				var innerWg sync.WaitGroup
 
-			// Fetch AliHunter
-			go func() {
-				defer innerWg.Done()
-				products, err := alihunter.AliHunterSearchByImage(product.ImageURL)
-				if err != nil {
-					log.Printf("fliHunter failed for %s: %v\n", product.ProductID, err)
-					aliHunterProducts = []model.AliHunterProduct{}
-				} else {
-					aliHunterProducts = products
+				innerWg.Add(2)
+
+				// Fetch AliHunter
+				go func() {
+					defer innerWg.Done()
+					products, err := alihunter.AliHunterSearchByImage(prod.ImageURL)
+					if err != nil {
+						log.Printf("AliHunter failed for %d: %v\n", prod.ProductID, err)
+						aliHunterProducts = []model.AliHunterProduct{}
+					} else {
+						aliHunterProducts = products
+					}
+				}()
+
+				// Fetch AliExpress
+				go func() {
+					defer innerWg.Done()
+					products, err := rapidapi.AliExpressSearchByImage(prod.ImageURL)
+					if err != nil {
+						log.Printf("AliExpress failed for %d: %v\n", prod.ProductID, err)
+						aliexpressProducts = []model.AliExpressProduct{}
+					} else {
+						aliexpressProducts = products
+					}
+				}()
+
+				innerWg.Wait() // Wait for both API calls to complete
+
+				// Take top 3 local products
+				localProducts := report.TakeTopProducts(prod.Products)
+
+				// Send result to channel
+				resultsChan <- result{
+					index: idx,
+					comparison: report.Report{
+						ProductID:        prod.ProductID,
+						ImageURL:         prod.ImageURL,
+						ShopID:           prod.ShopID,
+						LocalRapidAPITop: localProducts,
+						AliHunterTop:     aliHunterProducts,
+						AliExpressTop:    aliexpressProducts,
+					},
 				}
-			}()
 
-			// Fetch AliExpressparallel
-			go func() {
-				defer innerWg.Done()
-				products, err := rapidapi.AliExpressSearchByImage(product.ImageURL)
-				if err != nil {
-					log.Printf("aliExpress failed for %s: %v\n", product.ProductID, err)
-					aliexpressProducts = []model.AliExpressProduct{}
-				} else {
-					aliexpressProducts = products
-				}
-			}()
-
-			innerWg.Wait() // Wait for both API calls to complete
-
-			// Take top 3 local rapidapi products
-			localRapidAPIProducts := report.TakeTopProducts(product.Products)
-
-			// Send result to channel
-			resultsChan <- result{
-				index: idx,
-				comparison: report.Report{
-					ProductID:        product.ProductID,
-					ImageURL:         product.ImageURL,
-					LocalRapidAPITop: localRapidAPIProducts,
-					AliHunterTop:     aliHunterProducts,
-					AliExpressTop:    aliexpressProducts,
-				},
-			}
-		}(i, item)
+			}(currIndex, product)
+		}
 	}
 
 	// Close channel when all goroutines complete
