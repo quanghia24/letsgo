@@ -1,6 +1,40 @@
-package main
+package model
 
-type AliHunterResponse struct {
+type AliExpressSearchByImageResponse struct {
+	Result struct {
+		ResultList []*ResultListSearchByImage `json:"resultList"`
+	} `json:"result"`
+}
+
+type ResultListSearchByImage struct {
+	Item struct {
+		ItemID  string `json:"itemId"`
+		Title   string `json:"title"`
+		Sales   int64  `json:"sales"`
+		ItemURL string `json:"itemUrl"`
+		Image   string `json:"image"`
+		Sku     struct {
+			Def struct {
+				Price          interface{} `json:"price"`
+				PromotionPrice float64     `json:"promotionPrice"`
+			} `json:"def"`
+		} `json:"sku"`
+		AverageStarRate interface{} `json:"averageStarRate"`
+	}
+}
+
+type AliExpressProduct struct {
+	ID            string  // Product ID
+	URL           string  // Product URL
+	Title         string  // Product title
+	ImageURL      string  // Main product image URL
+	AvgRatingStar float64 // Average rating (0-5)
+	Volume        int64   // Sales volume
+	SalePrice     float64 // Current sale price
+	OriginalPrice float64 // Original price
+}
+
+type AliHunterSearchByImageResponse struct {
 	Result struct {
 		Ret  bool `json:"ret"`
 		Data struct {

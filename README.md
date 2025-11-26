@@ -1,6 +1,8 @@
-# Comparison Tool - AliHunter vs RapidAPI
+# Product Comparison Tool
 
-A Go command-line tool that compares product search results from local RapidAPI data with real-time AliHunter API responses.
+A Go command-line tool that compares product search results across three sources: local RapidAPI data, AliHunter API, and AliExpress API.
+
+Features concurrent processing with goroutines for fast performance.
 
 **Usage:**
 
@@ -14,31 +16,43 @@ go run . -local <products.json> -output <report.html>
 
 ### Project Structure
 
-```Bash
+```Text
 gofun/
-├── main.go              # Entry point and orchestration
-├── models.go            # Data structures
-├── fetcher.go           # API integration
-├── report.go            # Report generation logic
-├── go.mod
-├── products.json        # Input data (RapidAPI results)
+├── main.go                      # Entry point with concurrent processing
+├── products.json                # Input data
+├── internal/
+│   ├── alihunter/
+│   │   └── alihunter.go        # AliHunter API client
+│   ├── rapidapi/
+│   │   └── aliexpress.go       # AliExpress/RapidAPI client
+│   ├── model/
+│   │   └── models.go           # Data structures
+│   ├── report/
+│   │   └── report.go           # Report generation logic
+│   └── config/
+│       ├── rapidapi.go         # API configuration
+│       └── .env                # Environment variables
 └── templates/
-    └── report.tmpl      # HTML template with styling and JS
+    └── report.tmpl             # HTML template with JS
 ```
 
 ## 🔄 Process Flow
 
-```Text
+```
 1. INITIALIZATION
    ├─ Parse command-line flags (-local, -output)
    └─ Read and unmarshal input JSON file
           ↓
-2. DATA PROCESSING (for each product)
-   ├─ Extract image URL from RapidAPI data
-   ├─ Call AliHunter API with image URL
-   ├─ Handle API errors (log and continue)
-   ├─ Filter top 3 products with valid images
-   └─ Build Report struct with comparison data
+2. CONCURRENT DATA PROCESSING
+   ├─ Launch goroutines for each product
+   │  ├─ For each product:
+   │  │  ├─ Fetch AliHunter API (goroutine)
+   │  │  ├─ Fetch AliExpress API (goroutine)
+   │  │  └─ Wait for both to complete
+   │  ├─ Filter top 3 products with valid images
+   │  └─ Build Report struct with comparison data
+   ├─ Collect results via channel
+   └─ Preserve original order
           ↓
 3. REPORT GENERATION
    ├─ Prepare ListReports view model
@@ -50,43 +64,115 @@ gofun/
    └─ Log success message with output file path
 ```
 
-**Console Output Example:**
+---
 
-```Bash
-⏰ Reading: products.json
-⭐ Done reading JSON file
-⏰ Fetching AliHunter API: products.json
-⭐ Finished fetching from alihunter API and preparing comparisons
-⏰ Generating HTML report
-⭐ Report successfully generated and saved to: report.html
+## 🔄 Data Flow Diagram
+
+### 1️⃣ Input Phase
+```
+┌─────────────────┐
+│  products.json  │  ← User provides local RapidAPI product data
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   main.go       │  ← Reads file, unmarshals JSON into []RapidapiResponse
+└────────┬────────┘
+         │
+         ▼
+  [Product Array]
+```
+
+### 2️⃣ Concurrent Processing Phase
+```
+                    ┌──────────────────────────────┐
+                    │  Goroutine Pool (Max 5)      │
+                    │  + Semaphore Rate Limiting   │
+                    └──────────┬───────────────────┘
+                               │
+           ┌───────────────────┼───────────────────┐
+           ▼                   ▼                   ▼
+    ┌──────────┐        ┌──────────┐        ┌──────────┐
+    │Product #1│        │Product #2│        │Product #N│
+    └─────┬────┘        └─────┬────┘        └─────┬────┘
+          │                   │                   │
+     [Parallel API Calls]  [Parallel API Calls]  [...]
+          │                   │
+    ┌─────┴─────┐       ┌─────┴─────┐
+    ▼           ▼       ▼           ▼
+┌────────┐  ┌────────┐
+│AliHunt │  │AliExpr │  ← Both APIs called simultaneously
+│ API    │  │ API    │     using goroutines
+└───┬────┘  └────┬───┘
+    │            │
+    └─────┬──────┘
+          ▼
+    [WaitGroup.Wait()]  ← Wait for both responses
+          │
+          ▼
+    ┌─────────────┐
+    │ Build Report│  ← Combine: Local + AliHunter + AliExpress
+    │   Object    │
+    └──────┬──────┘
+           │
+           ▼
+    [Send to Channel] ← Results sent via buffered channel
+```
+
+### 3️⃣ Collection & Ordering Phase
+```
+┌─────────────────┐
+│  Results Chan   │  ← All goroutines send results here
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Order by Index  │  ← Preserve original product order
+└────────┬────────┘
+         │
+         ▼
+[Ordered Comparisons Array]
+```
+
+### 4️⃣ Report Generation Phase
+```
+[Comparisons Array]
+         │
+         ▼
+┌─────────────────────┐
+│ report.go           │
+│ ├─ Create view model│  ← ListReports{GeneratedAt, Comparisons}
+│ ├─ Load template    │  ← Parse report.tmpl
+│ ├─ Execute template │  ← Inject data into HTML
+│ └─ Write to file    │  ← Save report.html
+└──────────┬──────────┘
+           │
+           ▼
+    ┌────────────┐
+    │report.html │  ← Final interactive report
+    └────────────┘
+```
+
+### 5️⃣ User Interaction Phase (Browser)
+```
+┌────────────────────┐
+│   report.html      │
+│  opened in browser │
+└─────────┬──────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ User Actions:       │
+│ ├─ Check/uncheck    │  ← Mark matching products
+│ │   product boxes   │
+│ ├─ View statistics  │  ← Real-time counts per source
+│ └─ Export JSON      │  ← Download with "matching" flags
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ comparison.json     │  ← Exported data with user selections
+└─────────────────────┘
 ```
 
 ---
-
-## ✅ Requirements Compliance Review
-
-### Error Handling Requirements
-
-| Requirement | Status | Implementation Details |
-|------------|--------|------------------------|
-| **Processing multiple products** | ✅ **IMPLEMENTED** | `main.go` loops through all products in input JSON array |
-| **Skipping products without image URLs** | ✅ **IMPLEMENTED** | `takeTopRapid()` and `takeTopAli()` filter out empty image URLs |
-| **API errors (log and continue)** | ✅ **IMPLEMENTED** | API errors logged with `log.Printf()`, stored in `Report.AliError`, processing continues |
-| **Empty API results** | ✅ **IMPLEMENTED** | Empty arrays handled gracefully, displays "No results" in HTML |
-| **Invalid JSON input** | ✅ **IMPLEMENTED** | `json.Unmarshal()` returns error, triggers `log.Fatal()` |
-| **Missing files** | ✅ **IMPLEMENTED** | `os.ReadFile()` returns error, triggers `log.Fatal()` |
-
-### Acceptance Criteria Status
-
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| 1. Tool processes all products from input file | ✅ **COMPLETE** | Loop in `main.go` processes entire `rapidapiResponses` array |
-| 2. API integration works correctly | ✅ **COMPLETE** | `fetchProducts()` makes POST request with proper headers and JSON body |
-| 3. HTML report displays in 3-column layout | ✅ **COMPLETE** | Template uses flexbox: `w-1/5` (product), `w-2/5` (RapidAPI), `w-2/5` (AliHunter) |
-| 4. All product information displays correctly | ✅ **COMPLETE** | Images, titles, prices, ratings, links all rendered from template data |
-| 5. Checkboxes toggle card highlighting | ✅ **COMPLETE** | JavaScript adds/removes `.matched` class with green border |
-| 6. Summary section shows/hides dynamically | ✅ **COMPLETE** | Fixed panel with `.active` class toggles `transform: translateY()` |
-| 7. Statistics calculate correctly | ✅ **COMPLETE** | JS calculates percentages: `(checkedCount/totalCheckboxes)*100` |
-| 8. Copy button exports data to clipboard | ✅ **COMPLETE** | `navigator.clipboard.writeText()` exports tab-separated table data |
-| 9. Errors are handled gracefully | ✅ **COMPLETE** | All error paths have proper handling (see error table above) |
-| 10. Progress is logged to console | ✅ **COMPLETE** | Console messages at each major step with emoji indicators |

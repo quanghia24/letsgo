@@ -1,10 +1,12 @@
-package main
+package report
 
 import (
 	"fmt"
 	"html/template"
 	"os"
 	"time"
+
+	"github.com/quanghia24/letsgo/internal/model"
 )
 
 type ListReports struct {
@@ -14,41 +16,20 @@ type ListReports struct {
 
 // Report is the view-model passed to the HTML template
 type Report struct {
-	ProductID string
-	ImageURL  string
-	RapidTop  []RapidapiProduct
-	AliTop    []AliHunterProduct
-	AliError  string
+	ProductID        string
+	ImageURL         string
+	LocalRapidAPITop []model.RapidapiProduct
+	AliHunterTop     []model.AliHunterProduct
+	AliExpressTop    []model.AliExpressProduct
 }
 
-// take top N products with non-empty image URLs
-func takeTopRapid(input []RapidapiProduct, n int) []RapidapiProduct {
-	var res []RapidapiProduct
+func TakeTopProducts(input []model.RapidapiProduct) []model.RapidapiProduct {
+	var res []model.RapidapiProduct
 	len := 0
 
 	for _, item := range input {
-		if len < n {
-			if item.ProductMainImageURL != "" {
-				res = append(res, item)
-			}
-			len++
-		} else {
-			break
-		}
-	}
-	return res
-}
-
-// take top N products with non-empty image URLs
-func takeTopAli(input []AliHunterProduct, n int) []AliHunterProduct {
-	var res []AliHunterProduct
-	len := 0
-
-	for _, item := range input {
-		if len < n {
-			if item.ProductMainImageURL != "" {
-				res = append(res, item)
-			}
+		if len < 3 && item.ProductMainImageURL != "" {
+			res = append(res, item)
 			len++
 		} else {
 			break
