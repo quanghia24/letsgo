@@ -7,7 +7,7 @@ Features concurrent processing with goroutines for fast performance.
 **Usage:**
 
 ```Bash
-go run . -local <products.json> -html <true>
+go run . -local <products.json> -html <true> -review <true>
 ```
 
 ---
@@ -38,7 +38,7 @@ gofun/
 
 ## 🔄 Process Flow
 
-```
+```Text
 1. INITIALIZATION
    ├─ Parse command-line flags (-local, -output)
    └─ Read and unmarshal input JSON file

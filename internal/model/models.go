@@ -38,6 +38,9 @@ type AliExpressProduct struct {
 	Volume        int64   // Sales volume
 	SalePrice     float64 // Current sale price
 	OriginalPrice float64 // Original price
+	TotalReview   string  `json:"totalreview"`
+	Matching      bool    `json:"matching"` // Whether the product is matching
+	Similar       bool    `json:"similar"`  // Whether the product is similar
 }
 
 type AliHunterSearchByImageResponse struct {
@@ -61,7 +64,9 @@ type AliHunterProduct struct {
 	SimilarityScore         string `json:"similarity_score"`
 	ShipFrom                string `json:"ship_from"`
 	TargetSalePriceCurrency string `json:"target_sale_price_currency"`
+	TotalReview             string `json:"total_review"`
 	Matching                bool   `json:"matching"`
+	Similar                 bool   `json:"similar"`
 }
 
 type RapidapiResponse struct {
@@ -132,6 +137,8 @@ type ProductItem struct {
 	AvgStar             float64     `bson:"avgstar" json:"avgstar"`
 	Sale                int         `bson:"sale" json:"sale"`
 	TotalReview         interface{} `bson:"totalreview" json:"totalreview"` // Can be int or object like {"$numberLong": "..."}
+	Matching            bool        `bson:"matching" json:"matching"`
+	Similar             bool        `bson:"similar" json:"similar"`
 }
 
 type Product struct {

@@ -18,7 +18,17 @@ func main() {
 	// Parse command-line flags
 	filePath := flag.String("local", "./docs/suggest_products.json", "path to local JSON file with RapidAPI product suggestions")
 	htmlFlag := flag.Bool("html", false, "generate HTML report")
+	reviewFlag := flag.Bool("review", false, "generate review report")
 	flag.Parse()
+
+	if *reviewFlag {
+		fmt.Println("🌶️ Querying review for each product")
+
+		if err := report.UpdateJSONComparisonReview(); err != nil {
+			log.Fatalf("failed to generate JSON review: %v", err)
+		}
+		return
+	}
 
 	// Generates an interactive HTML comparison report: only run on htmlFlag set to true
 	if *htmlFlag {
@@ -68,7 +78,7 @@ func main() {
 
 	results := make([]result, total)
 	resultsChan := make(chan result, total)
-	sem := make(chan struct{}, 5) // semaphore limit to 5 concurrent requests, not to overwhelm the APIs
+	sem := make(chan struct{}, 7) // semaphore limit to 7 concurrent requests, not to overwhelm the APIs
 	var wg sync.WaitGroup
 
 	// Use a global index counter
@@ -85,7 +95,9 @@ func main() {
 				defer func() { <-sem }() // Release semaphore
 
 				var aliHunterProducts []model.AliHunterProduct
+				var aliHunterOrigin []model.AliHunterProduct
 				var aliexpressProducts []model.AliExpressProduct
+				var aliexpressOrigin []model.AliExpressProduct
 				var innerWg sync.WaitGroup
 
 				innerWg.Add(2)
@@ -93,43 +105,50 @@ func main() {
 				// Fetch AliHunter
 				go func() {
 					defer innerWg.Done()
-					products, err := alihunter.AliHunterSearchByImage(prod.ImageURL)
+					products, originals, err := alihunter.AliHunterSearchByImage(prod.ImageURL)
 					if err != nil {
 						log.Printf("AliHunter failed for %d: %v\n", prod.ProductID, err)
 						aliHunterProducts = []model.AliHunterProduct{}
+						aliHunterOrigin = []model.AliHunterProduct{}
 					} else {
 						aliHunterProducts = products
+						aliHunterOrigin = originals
 					}
 				}()
 
 				// Fetch AliExpress
 				go func() {
 					defer innerWg.Done()
-					products, err := rapidapi.AliExpressSearchByImage(prod.ImageURL)
+					products, originals, err := rapidapi.AliExpressSearchByImage(prod.ImageURL)
 					if err != nil {
 						log.Printf("AliExpress failed for %d: %v\n", prod.ProductID, err)
 						aliexpressProducts = []model.AliExpressProduct{}
+						aliexpressOrigin = []model.AliExpressProduct{}
 					} else {
 						aliexpressProducts = products
+						aliexpressOrigin = originals
 					}
 				}()
 
 				innerWg.Wait() // Wait for both API calls to complete
 
 				// Take top 3 local products
-				localProducts := report.TakeTopProducts(prod.Products)
+				localProducts, localOrigin := report.TakeTopProducts(prod.Products)
 
 				// Send result to channel
 				resultsChan <- result{
 					index: idx,
 					comparison: report.Report{
-						ProductTitle:     prod.Product.Title,
-						ProductID:        prod.ProductID,
-						ImageURL:         prod.ImageURL,
-						ShopID:           prod.ShopID,
-						LocalRapidAPITop: localProducts,
-						AliHunterTop:     aliHunterProducts,
-						AliExpressTop:    aliexpressProducts,
+						ProductTitle:        prod.Product.Title,
+						ProductID:           prod.ProductID,
+						ImageURL:            prod.ImageURL,
+						ShopID:              prod.ShopID,
+						LocalRapidAPITop:    localProducts,
+						LocalRapidAPIOrigin: localOrigin,
+						AliHunterTop:        aliHunterProducts,
+						AliHunterOrigin:     aliHunterOrigin,
+						AliExpressTop:       aliexpressProducts,
+						AliExpressOrigin:    aliexpressOrigin,
 					},
 				}
 

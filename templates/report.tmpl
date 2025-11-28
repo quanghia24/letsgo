@@ -21,12 +21,16 @@
     .error { background: rgba(231,76,60,0.06); color: #b03a2e; padding:4px 8px; border-radius:6px }
     .variant-card.matched { border-color: var(--matched) !important; background: rgba(39,174,96,0.06) }
     .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
-    .prod-img { height:100%; width:120px; object-fit:cover }
+    .prod-img { height:180px; width:100%; max-width: 180px; object-fit:cover }
     /* Summary panel */
-    #summaryPanel{ position:fixed; left:0; right:0; bottom:0; transform:translateY(120%); transition:transform 300ms ease-in-out; z-index:60 }
-    #summaryPanel.active{ transform:translateY(0) }
-    #summaryPanel .panel{ background:white; box-shadow:0 -6px 24px rgba(0,0,0,0.12); padding:16px; border-top:4px solid var(--local) }
+    #summaryPanel{ background:white; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); border-radius:8px; padding:16px; margin-bottom:24px }
     .price-red{ color: #e74c3c; font-weight:700 }
+    /* Matrix table styling */
+    .matrix-table { border-collapse: collapse; width: 100%; }
+    .matrix-table th, .matrix-table td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; }
+    .matrix-table th { background: #f1f5f9; font-weight: 600; color: #475569; }
+    .matrix-table tbody tr:hover { background: #f8fafc; }
+    .matrix-table .row-header { background: #f8fafc; font-weight: 500; text-align: left; }
   </style>
 </head>
 <body class="antialiased">
@@ -37,57 +41,158 @@
         <i class="fas fa-search-dollar text-indigo-600"></i>
         Product Comparison Report
       </h1>
-      <div class="text-sm text-gray-500 mt-2 sm:mt-0">
-        Generated: <span class="font-medium">{{.GeneratedAt}}</span>
+
+      <div class="text-sm text-gray-600">Total input products: <strong id="totalQueries">{{len .Comparisons}}</strong></div>
+
+      <div class="">
+        <div class="flex justify-end">
+          <div class="flex items-center gap-3">
+            <label for="importFile" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center gap-2 cursor-pointer">
+              <i class="fas fa-upload"></i> Import JSON
+            </label>
+            <input type="file" id="importFile" accept=".json" class="hidden">
+            <button id="exportBtn" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-2">
+              <i class="fas fa-download"></i> Export to JSON
+            </button>
+          </div>
+        </div>
+        <div class="text-sm text-gray-500 mt-2 sm:mt-0">
+          Generated: <span class="font-medium">{{.GeneratedAt}}</span>
+        </div>
       </div>
     </div>
 
-    <!-- Products Grid -->
-    <div class="flex flex-row justify-evenly">
-      <h1 class="w-1/5 text-xl font-bold justify-center">Product</h1>
-      <h1 class="w-1/4 text-xl font-semibold text-gray-800 mb-4">
-        <i class="fab fa-superpowers text-blue-600"></i> RapidAPI
-      </h1>
-      <h1 class="w-1/4 text-xl font-semibold text-gray-800 mb-4">
-        <i class="fab fa-alipay text-green-600"></i> AliHunter
-      </h1>
-      <h1 class="w-1/4 text-xl font-semibold text-gray-800 mb-4">
-        <i class="fas fa-shopping-cart text-orange-600"></i> AliExpress
-      </h1>
+    <!-- Summary panel -->
+    <div id="summaryPanel" class="w-full mx-auto" style="max-width: 1400px;">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="bg-blue-50">RapidAPI (Production)</th>
+            <th colspan="2" class="bg-green-50">AliHunter</th>
+            <th colspan="2" class="bg-orange-50">RapidAPI (Sort default)</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th class="text-xs">AsIs</th>
+            <th class="text-xs">Filtered</th>
+            <th class="text-xs">Original</th>
+            <th class="text-xs">Filtered</th>
+            <th class="text-xs">Original</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="row-header">Match</td>
+            <td id="cell-match-local-origin">0/0 (0.0%)</td>
+            <td id="cell-match-alihunter-filtered">0/0 (0.0%)</td>
+            <td id="cell-match-alihunter-origin">0/0 (0.0%)</td>
+            <td id="cell-match-aliexpress-filtered">0/0 (0.0%)</td>
+            <td id="cell-match-aliexpress-origin">0/0 (0.0%)</td>
+          </tr>
+          <tr>
+            <td class="row-header">Similar</td>
+            <td id="cell-similar-local-origin">0/0 (0.0%)</td>
+            <td id="cell-similar-alihunter-filtered">0/0 (0.0%)</td>
+            <td id="cell-similar-alihunter-origin">0/0 (0.0%)</td>
+            <td id="cell-similar-aliexpress-filtered">0/0 (0.0%)</td>
+            <td id="cell-similar-aliexpress-origin">0/0 (0.0%)</td>
+          </tr>
+          <tr>
+            <td class="row-header">1st Position</td>
+            <td id="cell-pos0-local-origin">0/0 (0.0%)</td>
+            <td id="cell-pos0-alihunter-filtered">0/0 (0.0%)</td>
+            <td id="cell-pos0-alihunter-origin">0/0 (0.0%)</td>
+            <td id="cell-pos0-aliexpress-filtered">0/0 (0.0%)</td>
+            <td id="cell-pos0-aliexpress-origin">0/0 (0.0%)</td>
+          </tr>
+          <tr>
+            <td class="row-header">2nd Position</td>
+            <td id="cell-pos1-local-origin">0/0 (0.0%)</td>
+            <td id="cell-pos1-alihunter-filtered">0/0 (0.0%)</td>
+            <td id="cell-pos1-alihunter-origin">0/0 (0.0%)</td>
+            <td id="cell-pos1-aliexpress-filtered">0/0 (0.0%)</td>
+            <td id="cell-pos1-aliexpress-origin">0/0 (0.0%)</td>
+          </tr>
+          <tr>
+            <td class="row-header">3rd Position</td>
+            <td id="cell-pos2-local-origin">0/0 (0.0%)</td>
+            <td id="cell-pos2-alihunter-filtered">0/0 (0.0%)</td>
+            <td id="cell-pos2-alihunter-origin">0/0 (0.0%)</td>
+            <td id="cell-pos2-aliexpress-filtered">0/0 (0.0%)</td>
+            <td id="cell-pos2-aliexpress-origin">0/0 (0.0%)</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
+    <!-- Products Grid -->
+    <div class="flex flex-row justify-evenly mb-4">
+      <div class="w-1/5 text-center">
+        <h1 class="text-xl font-bold text-gray-800">Product</h1>
+      </div>
+      <div class="w-1/4 flex flex-col">
+        <h1 class="text-xl font-semibold text-gray-800 text-center mb-2">
+          <i class="fab fa-superpowers text-blue-600"></i> RapidAPI (Production)
+        </h1>
+      </div>
+      <div class="w-1/4 flex flex-col">
+        <h1 class="text-xl font-semibold text-gray-800 text-center mb-2">
+          <i class="fab fa-alipay text-green-600"></i> AliHunter
+        </h1>
+        <div class="flex flex-row justify-evenly text-base text-gray-600">
+          <p>Filtered</p>
+          <p>Original</p>
+        </div>
+      </div>
+      <div class="w-1/4 flex flex-col">
+        <h1 class="text-xl font-semibold text-gray-800 text-center mb-2">
+          <i class="fas fa-shopping-cart text-orange-600"></i> RapidAPI (Sort default)
+        </h1>
+        <div class="flex flex-row justify-evenly text-base text-gray-600">
+          <p>Filtered</p>
+          <p>Original</p>
+        </div>
+      </div>
+    </div>
 
     {{range $idx, $r := .Comparisons}}
     <div class="flex flex-row justify-evenly card rounded-xl overflow-hidden mb-8">
       <!-- Input Product -->
       <div class="bg-gradient-to-r from-white to-blue-100 text-white p-4 rounded-lg w-1/5 flex items-center justify-center">
-        <div class="flex flex-col items-center justify-between">
+        <div class="flex flex-col items-center justify-center text-center">
           {{if $r.ImageURL}}
             <img src="{{$r.ImageURL}}" alt="Product" class="w-60 h-60 rounded-lg border-4 border-white shadow-lg object-cover">
           {{end}}
-          <h2 class="text-black text-xl font-semibold">ID: <span class="font-mono">{{$r.ProductID}}</span></h2>
-          <h2 class="text-black text-xl font-semibold">ShopID: <span class="font-mono">{{$r.ShopID}}</span></h2>
+          <h2 class="text-black text-xl">ID: <span class="font-mono">{{$r.ProductID}}</span></h2>
+          <h2 class="text-black text-xl">ShopID: <span class="font-mono">{{$r.ShopID}}</span></h2>
+          <h2 class="text-black text-xl font-semibold"> <span class="font-mono">{{$r.ProductTitle}}</span></h2>
         </div>
       </div>
 
       <!-- RapidAPI Results -->
-      <div class="w-1/4 rounded-lg">
-        {{if $r.LocalRapidAPITop}}
-          <div class="flex flex-col justify-evenly gap-2">
-            {{range $i, $p := $r.LocalRapidAPITop}}
-            <div class="variant-card flex-1 flex flex-row border border-2 rounded-lg p-4 hover:border-indigo-300 transition relative bg-gradient-to-r from-blue-100 to-blue-200">
+      <div class="w-1/4 rounded-lg flex flex-row">
+        {{if $r.LocalRapidAPIOrigin}}
+          <div class="flex flex-col justify-evenly gap-2 w-full">
+            {{range $i, $p := $r.LocalRapidAPIOrigin}}
+            <div class="variant-card flex-1 flex flex-col border border-2 rounded-lg p-4 hover:border-indigo-300 transition relative bg-gradient-to-r from-blue-100 to-blue-200">
               {{if $p.ProductMainImageURL}}
                 <img src="{{$p.ProductMainImageURL}}" alt="Product" class="rounded-lg border-4 border-white shadow-lg prod-img mr-3">
               {{end}}
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.ProductURL}}" target="_blank">{{$p.ProductTitle}}</a>
-                <div class="mt-2 text-sm text-gray-600 space-y-1">
+                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
                   <div><strong class="price-red">{{if $p.TargetSalePrice}}{{$p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>Rating: {{if $p.AvgStar}}{{printf "%.1f" $p.AvgStar}}{{else}}-{{end}} ⭐</div>
+                  <div>| <strong>{{if $p.AvgStar}}{{printf "%.1f" $p.AvgStar}}{{else}}-{{end}} ⭐</strong></div>
+                  <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}} ratings)</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
-                  <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-local-{{$i}}" data-col="local" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{$p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductURL}}" data-rating="{{if $p.AvgStar}}{{printf "%.1f" $p.AvgStar}}{{else}}0{{end}}">
-                  <span>Match Original</span>
+                  <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-local-origin-{{$i}}" data-col="local" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{$p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductURL}}" data-rating="{{if $p.AvgStar}}{{printf "%.1f" $p.AvgStar}}{{else}}0{{end}}">
+                  <span>Match</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="similar-checkbox" id="sim-{{$idx}}-local-origin-{{$i}}" data-col="local" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{$p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductURL}}" data-rating="{{if $p.AvgStar}}{{printf "%.1f" $p.AvgStar}}{{else}}0{{end}}">
+                  <span>Similar</span>
                 </label>
               </div>
             </div>
@@ -99,24 +204,60 @@
       </div>
 
       <!-- AliHunter Results -->
-      <div class="w-1/4 rounded-lg">
+      <div class="w-1/4 rounded-lg flex flex-row">
         {{if $r.AliHunterTop}}
-          <div class="flex flex-col justify-evenly gap-2">
+          <div class="flex flex-col justify-evenly gap-2 w-1/2">
             {{range $i, $p := $r.AliHunterTop}}
-            <div class="variant-card flex-1 flex flex-row border border-2 rounded-lg p-4 hover:border-green-300 transition relative bg-gradient-to-r from-green-100 to-green-200">
+            <div class="variant-card flex-1 flex flex-col border border-2 rounded-lg p-4 hover:border-green-300 transition relative bg-gradient-to-r from-green-100 to-green-200">
               {{if $p.ProductMainImageURL}}
                 <img src="{{$p.ProductMainImageURL}}" alt="Product" class="rounded-lg border-4 border-white shadow-lg prod-img mr-3">
               {{end}}
 
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.ProductDetailURL}}" target="_blank">{{$p.ProductTitle}}</a>
-                <div class="mt-2 text-sm text-gray-600 space-y-1">
+                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
                   <div><strong class="price-red">{{if $p.TargetSalePrice}}{{formatPrice $p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>Rating: {{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</div>
+                  <div>| <strong>{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</strong></div>
+                  <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
                   <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-alihunter-{{$i}}" data-col="alihunter" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{formatPrice $p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductDetailURL}}" data-rating="{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}}">
-                  <span>Match Original</span>
+                  <span>Match</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="similar-checkbox" id="sim-{{$idx}}-alihunter-{{$i}}" data-col="alihunter" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{formatPrice $p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductDetailURL}}" data-rating="{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}}">
+                  <span>Similar</span>
+                </label>
+              </div>
+            </div>
+            {{end}}
+          </div>
+        {{else}}
+          <p class="text-gray-500 italic">No AliHunter results</p>
+        {{end}}
+
+        {{if $r.AliHunterOrigin}}
+          <div class="flex flex-col justify-evenly gap-2 w-1/2">
+            {{range $i, $p := $r.AliHunterOrigin}}
+            <div class="variant-card flex-1 flex flex-col border border-2 rounded-lg p-4 hover:border-green-300 transition relative bg-gradient-to-r from-green-100 to-green-200">
+              {{if $p.ProductMainImageURL}}
+                <img src="{{$p.ProductMainImageURL}}" alt="Product" class="rounded-lg border-4 border-white shadow-lg prod-img mr-3">
+              {{end}}
+
+              <div>
+                <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.ProductDetailURL}}" target="_blank">{{$p.ProductTitle}}</a>
+                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
+                  <div><strong class="price-red">{{if $p.TargetSalePrice}}{{formatPrice $p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
+                  <div>| <strong>{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</strong></div>
+                  <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
+                </div>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-alihunter-origin-{{$i}}" data-col="alihunter" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{formatPrice $p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductDetailURL}}" data-rating="{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}}">
+                  <span>Match</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="similar-checkbox" id="sim-{{$idx}}-alihunter-origin-{{$i}}" data-col="alihunter" data-productid="{{$r.ProductID}}" data-title="{{$p.ProductTitle}}" data-price="{{formatPrice $p.TargetSalePrice}}" data-img="{{$r.ImageURL}}" data-link="{{$p.ProductDetailURL}}" data-rating="{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}}">
+                  <span>Similar</span>
                 </label>
               </div>
             </div>
@@ -128,24 +269,60 @@
       </div>
 
       <!-- AliExpress Results -->
-      <div class="w-1/4 rounded-lg">
+      <div class="w-1/4 rounded-lg flex flex-row">
         {{if $r.AliExpressTop}}
-          <div class="flex flex-col justify-evenly gap-2">
+          <div class="flex flex-col justify-evenly gap-2 w-1/2">
             {{range $i, $p := $r.AliExpressTop}}
-            <div class="variant-card flex-1 flex flex-row border border-2 rounded-lg p-4 hover:border-orange-300 transition relative bg-gradient-to-r from-orange-100 to-white ">
+            <div class="variant-card flex-1 flex flex-col border border-2 rounded-lg p-4 hover:border-orange-300 transition relative bg-gradient-to-r from-orange-100 to-white ">
               {{if $p.ImageURL}}
                 <img src="https:{{$p.ImageURL}}" alt="Product" class="rounded-lg border-4 border-white shadow-lg prod-img mr-3">
               {{end}}
 
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.URL}}" target="_blank">{{$p.Title}}</a>
-                <div class="mt-2 text-sm text-gray-600 space-y-1">
+                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
                   <div><strong class="price-red">{{if $p.SalePrice}}${{printf "%.2f" $p.SalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>Rating: {{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}} ⭐</div>
+                  <div>| <strong>{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}} ⭐</strong></div>
+                  <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
                   <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-aliexpress-{{$i}}" data-col="aliexpress" data-productid="{{$r.ProductID}}" data-title="{{$p.Title}}" data-price="${{printf "%.2f" $p.SalePrice}}" data-img="https:{{$r.ImageURL}}" data-link="https:{{$p.URL}}" data-rating="{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}}">
-                  <span>Match Original</span>
+                  <span>Match</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="similar-checkbox" id="sim-{{$idx}}-aliexpress-{{$i}}" data-col="aliexpress" data-productid="{{$r.ProductID}}" data-title="{{$p.Title}}" data-price="${{printf "%.2f" $p.SalePrice}}" data-img="https:{{$r.ImageURL}}" data-link="https:{{$p.URL}}" data-rating="{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}}">
+                  <span>Similar</span>
+                </label>
+              </div>
+            </div>
+            {{end}}
+          </div>
+        {{else}}
+          <p class="text-gray-500 italic">No AliExpress results</p>
+        {{end}}
+
+        {{if $r.AliExpressOrigin}}
+          <div class="flex flex-col justify-evenly gap-2 w-1/2">
+            {{range $i, $p := $r.AliExpressOrigin}}
+            <div class="variant-card flex-1 flex flex-col border border-2 rounded-lg p-4 hover:border-orange-300 transition relative bg-gradient-to-r from-orange-100 to-white ">
+              {{if $p.ImageURL}}
+                <img src="https:{{$p.ImageURL}}" alt="Product" class="rounded-lg border-4 border-white shadow-lg prod-img mr-3">
+              {{end}}
+
+              <div>
+                <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.URL}}" target="_blank">{{$p.Title}}</a>
+                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
+                  <div><strong class="price-red">{{if $p.SalePrice}}${{printf "%.2f" $p.SalePrice}}{{else}}N/A{{end}}</strong></div>
+                  <div>| <strong>{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}} ⭐</strong></div>
+                  <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
+                </div>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="match-checkbox" id="chk-{{$idx}}-aliexpress-origin-{{$i}}" data-col="aliexpress" data-productid="{{$r.ProductID}}" data-title="{{$p.Title}}" data-price="${{printf "%.2f" $p.SalePrice}}" data-img="https:{{$r.ImageURL}}" data-link="https:{{$p.URL}}" data-rating="{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}}">
+                  <span>Match</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="similar-checkbox" id="sim-{{$idx}}-aliexpress-origin-{{$i}}" data-col="aliexpress" data-productid="{{$r.ProductID}}" data-title="{{$p.Title}}" data-price="${{printf "%.2f" $p.SalePrice}}" data-img="https:{{$r.ImageURL}}" data-link="https:{{$p.URL}}" data-rating="{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}}">
+                  <span>Similar</span>
                 </label>
               </div>
             </div>
@@ -159,185 +336,277 @@
     {{end}}
   </div>
 
-  <!-- Summary panel (hidden until a checkbox is selected) -->
-    <div id="summaryPanel" class="flex justify-center">
-      <div class="panel p-4 bg-white rounded shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-xl text-gray-600">Total queries processed: <strong id="totalQueries">{{len .Comparisons}}</strong></div>
-            <div class="text-xl text-gray-600">RapidAPI matches: <strong id="localCount">0</strong> (<span id="localPct">0%</span>)</div>
-            <div class="text-xl text-gray-600">AliHunter matches: <strong id="alihunterCount">0</strong> (<span id="alihunterPct">0%</span>)</div>
-            <div class="text-xl text-gray-600">AliExpress matches: <strong id="aliexpressCount">0</strong> (<span id="aliexpressPct">0%</span>)</div>
-          </div>
-          <div class="flex items-center gap-3">
-            <button id="exportBtn" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-2">
-              <i class="fas fa-download"></i> Export to JSON
-            </button>
-            <button id="closeSummary" class="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">Close</button>
-          </div>
-        </div>
+  <script>
+    (function(){
+      const totalQueries = {{len .Comparisons}};
+      const exportBtn = document.getElementById('exportBtn');
 
-        <div class="mt-4">
-          <table class="w-full text-lg" id="checkedTable">
-            <thead>
-              <tr class="text-left text-gray-600 text-xl">
-                <th class="px-2">Product ID</th>
-                <th class="px-2">Source</th>
-                <th class="px-2">Title</th>
-                <th class="px-2">Price</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      // Store the original data from the server
+      const comparisonsData = JSON.parse('{{.ComparisonsJSON}}');
 
-    <script>
-      (function(){
-        const totalQueries = {{len .Comparisons}};
-        const summaryPanel = document.getElementById('summaryPanel');
-        const mainContent = document.getElementById('mainContent');
-        const localCountEl = document.getElementById('localCount');
-        const alihunterCountEl = document.getElementById('alihunterCount');
-        const aliexpressCountEl = document.getElementById('aliexpressCount');
-        const localPctEl = document.getElementById('localPct');
-        const alihunterPctEl = document.getElementById('alihunterPct');
-        const aliexpressPctEl = document.getElementById('aliexpressPct');
-        const checkedTableBody = document.querySelector('#checkedTable tbody');
-        const exportBtn = document.getElementById('exportBtn');
-        const closeBtn = document.getElementById('closeSummary');
+      function updateState(){
+        // Helper function to format cell content
+        const formatCell = (count, total) => {
+          const pct = total > 0 ? ((count/total)*100).toFixed(1) : '0.0';
+          return `${count}/${total} (${pct}%)`;
+        };
 
-        // Store the original data from the server
-        const comparisonsData = {{.Comparisons | printf "%#v"}};
+        // Initialize counters for all metrics
+        const stats = {
+          match: { local: {origin: 0}, alihunter: {filtered: 0, origin: 0}, aliexpress: {filtered: 0, origin: 0} },
+          similar: { local: {origin: 0}, alihunter: {filtered: 0, origin: 0}, aliexpress: {filtered: 0, origin: 0} },
+          pos0: { local: {origin: 0}, alihunter: {filtered: 0, origin: 0}, aliexpress: {filtered: 0, origin: 0} },
+          pos1: { local: {origin: 0}, alihunter: {filtered: 0, origin: 0}, aliexpress: {filtered: 0, origin: 0} },
+          pos2: { local: {origin: 0}, alihunter: {filtered: 0, origin: 0}, aliexpress: {filtered: 0, origin: 0} }
+        };
 
-        function updateState(){
-          const localChecked = Array.from(document.querySelectorAll('.match-checkbox[data-col="local"]:checked'));
-          const alihunterChecked = Array.from(document.querySelectorAll('.match-checkbox[data-col="alihunter"]:checked'));
-          const aliexpressChecked = Array.from(document.querySelectorAll('.match-checkbox[data-col="aliexpress"]:checked'));
+        // Loop through each product (query) and count once per product
+        for (let idx = 0; idx < totalQueries; idx++) {
+          const apis = ['local', 'alihunter', 'aliexpress'];
+          const types = ['filtered', 'origin'];
 
-          // toggle matched class for cards
-          document.querySelectorAll('.variant-card').forEach(card => {
-            const cb = card.querySelector('.match-checkbox');
-            if(cb && cb.checked){ card.classList.add('matched'); } else { card.classList.remove('matched'); }
+          apis.forEach(api => {
+            types.forEach(type => {
+              // Skip local filtered since it doesn't exist
+              if (api === 'local' && type === 'filtered') return;
+
+              const isOrigin = type === 'origin';
+              let hasMatchChecked = false;
+              let hasSimilarChecked = false;
+              let pos0Checked = false;
+              let pos1Checked = false;
+              let pos2Checked = false;
+
+              // Check all 3 positions (0, 1, 2) for this product/api/type combination
+              for (let pos = 0; pos <= 2; pos++) {
+                const suffix = isOrigin ? `-origin-${pos}` : `-${pos}`;
+                const matchCb = document.getElementById(`chk-${idx}-${api}${suffix}`);
+                const similarCb = document.getElementById(`sim-${idx}-${api}${suffix}`);
+
+                // Check if match checkbox exists and is checked
+                if (matchCb && matchCb.checked) {
+                  hasMatchChecked = true;
+                  if (pos === 0) pos0Checked = true;
+                  if (pos === 1) pos1Checked = true;
+                  if (pos === 2) pos2Checked = true;
+                }
+
+                // Check if similar checkbox exists and is checked
+                if (similarCb && similarCb.checked) {
+                  hasSimilarChecked = true;
+                  // For position counts, mark as checked if not already marked by match
+                  if (pos === 0 && !pos0Checked) pos0Checked = true;
+                  if (pos === 1 && !pos1Checked) pos1Checked = true;
+                  if (pos === 2 && !pos2Checked) pos2Checked = true;
+                }
+              }
+
+              // Increment counters only once per product
+              if (hasMatchChecked) stats.match[api][type]++;
+              if (hasSimilarChecked) stats.similar[api][type]++;
+              if (pos0Checked) stats.pos0[api][type]++;
+              if (pos1Checked) stats.pos1[api][type]++;
+              if (pos2Checked) stats.pos2[api][type]++;
+            });
           });
-
-          // Count total available checkboxes for each source
-          const totalLocalCheckboxes = document.querySelectorAll('.match-checkbox[data-col="local"]').length;
-          const totalAlihunterCheckboxes = document.querySelectorAll('.match-checkbox[data-col="alihunter"]').length;
-          const totalAliexpressCheckboxes = document.querySelectorAll('.match-checkbox[data-col="aliexpress"]').length;
-
-          // Display total individual items checked
-          localCountEl.textContent = localChecked.length;
-          alihunterCountEl.textContent = alihunterChecked.length;
-          aliexpressCountEl.textContent = aliexpressChecked.length;
-
-          // Calculate percentage based on checked items vs total available items
-          localPctEl.textContent = totalLocalCheckboxes ? Math.round((localChecked.length/totalLocalCheckboxes)*100) + '%' : '0%';
-          alihunterPctEl.textContent = totalAlihunterCheckboxes ? Math.round((alihunterChecked.length/totalAlihunterCheckboxes)*100) + '%' : '0%';
-          aliexpressPctEl.textContent = totalAliexpressCheckboxes ? Math.round((aliexpressChecked.length/totalAliexpressCheckboxes)*100) + '%' : '0%';
-
-          // build table of checked items
-          const allChecked = localChecked.concat(alihunterChecked).concat(aliexpressChecked);
-          checkedTableBody.innerHTML = '';
-          allChecked.forEach(cb => {
-            const tr = document.createElement('tr');
-            let sourceName = 'Unknown';
-            if(cb.dataset.col === 'local') sourceName = 'RapidAPI';
-            else if(cb.dataset.col === 'alihunter') sourceName = 'AliHunter';
-            else if(cb.dataset.col === 'aliexpress') sourceName = 'AliExpress';
-            tr.innerHTML = '<td class="px-2">'+cb.dataset.productid+'</td>'+
-                           '<td class="px-2">'+sourceName+'</td>'+
-                           '<td class="px-2">'+cb.dataset.title+'</td>'+
-                           '<td class="px-2">'+cb.dataset.price+'</td>';
-            checkedTableBody.appendChild(tr);
-          });
-
-          // show/hide panel
-          if(allChecked.length > 0){
-            summaryPanel.classList.add('active');
-            // ensure main content isn't covered by the fixed panel
-            const panelEl = summaryPanel.querySelector('.panel');
-            if(panelEl && mainContent){
-              mainContent.style.paddingBottom = panelEl.offsetHeight + 'px';
-            }
-          } else {
-            summaryPanel.classList.remove('active');
-            if(mainContent){ mainContent.style.paddingBottom = ''; }
-          }
         }
 
-        // attach listeners
-        document.querySelectorAll('.match-checkbox').forEach(cb => cb.addEventListener('change', updateState));
+        // Update all matrix cells
+        ['local', 'alihunter', 'aliexpress'].forEach(api => {
+          ['filtered', 'origin'].forEach(type => {
+            // Skip local filtered since it doesn't exist
+            if (api === 'local' && type === 'filtered') return;
 
-        exportBtn.addEventListener('click', () => {
-          // Build export data structure
-          const exportData = {
-            total_products: totalQueries,
-            comparisons: []
+            document.getElementById(`cell-match-${api}-${type}`).textContent = formatCell(stats.match[api][type], totalQueries);
+            document.getElementById(`cell-similar-${api}-${type}`).textContent = formatCell(stats.similar[api][type], totalQueries);
+            document.getElementById(`cell-pos0-${api}-${type}`).textContent = formatCell(stats.pos0[api][type], totalQueries);
+            document.getElementById(`cell-pos1-${api}-${type}`).textContent = formatCell(stats.pos1[api][type], totalQueries);
+            document.getElementById(`cell-pos2-${api}-${type}`).textContent = formatCell(stats.pos2[api][type], totalQueries);
+          });
+        });
+        // Toggle matched class for cards
+        document.querySelectorAll('.variant-card').forEach(card => {
+          const matchCb = card.querySelector('.match-checkbox');
+          const similarCb = card.querySelector('.similar-checkbox');
+          if((matchCb && matchCb.checked) || (similarCb && similarCb.checked)){
+            card.classList.add('matched');
+          } else {
+            card.classList.remove('matched');
+          }
+        });
+      }
+
+      // attach listeners to both match and similar checkboxes
+      document.querySelectorAll('.match-checkbox, .similar-checkbox').forEach(cb => cb.addEventListener('change', updateState));
+
+      // Import functionality
+      const importFile = document.getElementById('importFile');
+      importFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const importedData = JSON.parse(event.target.result);
+
+            // Clear all checkboxes first
+            document.querySelectorAll('.match-checkbox, .similar-checkbox').forEach(cb => cb.checked = false);
+
+            // Iterate through imported data and restore checkbox states
+            importedData.forEach((comparison, idx) => {
+              // Helper function to restore checkboxes for a product array
+              const restoreCheckboxes = (products, checkboxSource, isOrigin = false) => {
+                if (!products) return;
+
+                products.forEach((product, i) => {
+                  const idSuffix = isOrigin ? `-origin-${i}` : `-${i}`;
+                  const matchCheckbox = document.getElementById(`chk-${idx}-${checkboxSource}${idSuffix}`);
+                  const similarCheckbox = document.getElementById(`sim-${idx}-${checkboxSource}${idSuffix}`);
+
+                  if (matchCheckbox && product.matching) {
+                    matchCheckbox.checked = true;
+                  }
+                  if (similarCheckbox && product.similar) {
+                    similarCheckbox.checked = true;
+                  }
+                });
+              };
+
+              // Restore checkboxes for all product arrays
+              restoreCheckboxes(comparison.LocalRapidAPITop, 'local', false);
+              restoreCheckboxes(comparison.LocalRapidAPIOrigin, 'local', true);
+              restoreCheckboxes(comparison.AliHunterTop, 'alihunter', false);
+              restoreCheckboxes(comparison.AliHunterOrigin, 'alihunter', true);
+              restoreCheckboxes(comparison.AliExpressTop, 'aliexpress', false);
+              restoreCheckboxes(comparison.AliExpressOrigin, 'aliexpress', true);
+            });
+
+            // Update the UI to reflect imported states
+            updateState();
+
+            alert('Successfully imported checkbox states from JSON!');
+          } catch (error) {
+            alert('Error importing JSON: ' + error.message);
+          }
+        };
+        reader.readAsText(file);
+
+        // Reset file input so the same file can be imported again
+        e.target.value = '';
+      });
+
+      exportBtn.addEventListener('click', () => {
+        // Build export data structure matching report.json format
+        const exportData = [];
+
+        // Iterate through each comparison from the server data
+        comparisonsData.forEach((comparison, idx) => {
+          const comparisonExport = {
+            ProductTitle: comparison.ProductTitle,
+            ProductID: comparison.ProductID,
+            ImageURL: comparison.ImageURL,
+            ShopID: comparison.ShopID,
+            LocalRapidAPITop: [],
+            LocalRapidAPIOrigin: [],
+            AliHunterTop: [],
+            AliHunterOrigin: [],
+            AliExpressTop: [],
+            AliExpressOrigin: []
           };
 
-          // Get all checkboxes organized by product
-          const productGroups = {};
-          document.querySelectorAll('.match-checkbox').forEach(cb => {
-            const prodId = cb.dataset.productid;
-            if (!productGroups[prodId]) {
-              productGroups[prodId] = {
-                product_id: prodId,
-                image_url: cb.dataset.img,
-                rapidapi_products: [],
-                alihunter_products: [],
-                aliexpress_products: []
-              };
-            }
+          // Helper function to add matching and similar fields based on checkbox state
+          const addMatchingField = (products, arrayName, checkboxSource, isOrigin = false) => {
+            if (!products || products.length === 0) return [];
 
-            const productData = {
-              product_title: cb.dataset.title,
-              price: cb.dataset.price,
-              rating: cb.dataset.rating,
-              product_url: cb.dataset.link,
-              matching: cb.checked
-            };
+            return products.map((product, i) => {
+              // Build checkbox ID with or without "-origin" suffix
+              const idSuffix = isOrigin ? `-origin-${i}` : `-${i}`;
+              const matchCheckbox = document.getElementById(`chk-${idx}-${checkboxSource}${idSuffix}`);
+              const similarCheckbox = document.getElementById(`sim-${idx}-${checkboxSource}${idSuffix}`);
 
-            if (cb.dataset.col === 'local') {
-              productGroups[prodId].rapidapi_products.push(productData);
-            } else if (cb.dataset.col === 'alihunter') {
-              productGroups[prodId].alihunter_products.push(productData);
-            } else if (cb.dataset.col === 'aliexpress') {
-              productGroups[prodId].aliexpress_products.push(productData);
-            }
-          });
+              // Copy all original fields from the product
+              const productCopy = { ...product };
 
-          // Convert to array
-          exportData.comparisons = Object.values(productGroups);
+              // Add separate matching and similar fields based on checkbox states
+              productCopy.matching = matchCheckbox ? matchCheckbox.checked : false;
+              productCopy.similar = similarCheckbox ? similarCheckbox.checked : false;
 
-          // Create JSON blob and download
-          const jsonStr = JSON.stringify(exportData, null, 2);
-          const blob = new Blob([jsonStr], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `comparison.json`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+              return productCopy;
+            });
+          };
 
-          // Visual feedback
-          const originalHTML = exportBtn.innerHTML;
-          exportBtn.innerHTML = '<i class="fas fa-check"></i> Exported!';
-          exportBtn.disabled = true;
-          setTimeout(() => {
-            exportBtn.innerHTML = originalHTML;
-            exportBtn.disabled = false;
-          }, 2000);
+          // Process each product array
+          comparisonExport.LocalRapidAPITop = addMatchingField(
+            comparison.LocalRapidAPITop,
+            'LocalRapidAPITop',
+            'local',
+            false
+          );
+
+          comparisonExport.LocalRapidAPIOrigin = addMatchingField(
+            comparison.LocalRapidAPIOrigin,
+            'LocalRapidAPIOrigin',
+            'local',
+            true
+          );
+
+          comparisonExport.AliHunterTop = addMatchingField(
+            comparison.AliHunterTop,
+            'AliHunterTop',
+            'alihunter',
+            false
+          );
+
+          comparisonExport.AliHunterOrigin = addMatchingField(
+            comparison.AliHunterOrigin,
+            'AliHunterOrigin',
+            'alihunter',
+            true
+          );
+
+          comparisonExport.AliExpressTop = addMatchingField(
+            comparison.AliExpressTop,
+            'AliExpressTop',
+            'aliexpress',
+            false
+          );
+
+          comparisonExport.AliExpressOrigin = addMatchingField(
+            comparison.AliExpressOrigin,
+            'AliExpressOrigin',
+            'aliexpress',
+            true
+          );
+
+          exportData.push(comparisonExport);
         });
 
-        closeBtn.addEventListener('click', ()=>{ document.querySelectorAll('.match-checkbox').forEach(cb=>cb.checked=false); updateState(); });
+        // Create JSON blob and download
+        const jsonStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-        // initialize
-        updateState();
-      })();
-    </script>
-  </body>
+        // Visual feedback
+        const originalHTML = exportBtn.innerHTML;
+        exportBtn.innerHTML = '<i class="fas fa-check"></i> Exported!';
+        exportBtn.disabled = true;
+        setTimeout(() => {
+          exportBtn.innerHTML = originalHTML;
+          exportBtn.disabled = false;
+        }, 2000);
+      });
+
+      // initialize
+      updateState();
+    })();
+  </script>
+</body>
 </html>

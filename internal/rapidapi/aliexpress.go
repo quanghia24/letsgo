@@ -12,15 +12,15 @@ import (
 
 // AliExpressSearchByImage fetches products from AliExpress API with endpoint get from .env
 // Return top 3 products
-func AliExpressSearchByImage(image string) ([]model.AliExpressProduct, error) {
+func AliExpressSearchByImage(image string) ([]model.AliExpressProduct, []model.AliExpressProduct, error) {
 	if image == "" {
-		return nil, fmt.Errorf("image URL is empty")
+		return nil, nil, fmt.Errorf("image URL is empty")
 	}
 
 	serviceURL := fmt.Sprintf("https://%s/item_search_image?sort=default&catId=0&imgUrl=%s", config.GetRapidAPIConfig().Host, image)
 	req, err := http.NewRequest(http.MethodGet, serviceURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-RapidAPI-Key", config.GetRapidAPIConfig().APIKey)
@@ -29,46 +29,66 @@ func AliExpressSearchByImage(image string) ([]model.AliExpressProduct, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Fatal("failed to perform request")
-		return nil, err
+		return nil, nil, err
 	}
 	defer resp.Body.Close()
 
 	var data model.AliExpressSearchByImageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		log.Fatal("failed to decode response body")
-		return nil, err
+		return nil, nil, err
 	}
 
 	var products []model.AliExpressProduct
+	var originProducts []model.AliExpressProduct
+
 	for _, result := range data.Result.ResultList {
 		item := result.Item
 
-		// filter out items with no rating or no sales or no image
-		if item.AverageStarRate == nil || item.Sales == 0 || item.Image == "" {
+		// Skip items with missing critical data early
+		if item.Image == "" {
 			continue
 		}
 
+		// Safely extract price
 		price, ok := item.Sku.Def.Price.(float64)
 		if !ok {
 			price = item.Sku.Def.PromotionPrice
 		}
 
-		products = append(products, model.AliExpressProduct{
+		// Safely extract rating
+		avgRating := 0.0
+		if rating, ok := item.AverageStarRate.(float64); ok {
+			avgRating = rating
+		}
+
+		product := model.AliExpressProduct{
 			ID:            item.ItemID,
 			URL:           item.ItemURL,
 			Title:         item.Title,
 			ImageURL:      item.Image,
-			AvgRatingStar: item.AverageStarRate.(float64),
+			AvgRatingStar: avgRating,
 			Volume:        item.Sales,
 			SalePrice:     item.Sku.Def.PromotionPrice,
 			OriginalPrice: price,
-		})
+		}
+
+		originProducts = append(originProducts, product)
+
+		if item.AverageStarRate == nil {
+			continue
+		}
+
+		products = append(products, product)
 	}
 
 	// get max 3 products
 	if len(products) > 3 {
 		products = products[:3]
 	}
+	if len(originProducts) > 3 {
+		originProducts = originProducts[:3]
+	}
 
-	return products, nil
+	return products, originProducts, nil
 }
