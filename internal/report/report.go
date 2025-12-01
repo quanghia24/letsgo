@@ -107,84 +107,13 @@ func GenerateJSONComparisonReport(reports []Report) error {
 	return nil
 }
 
-type Review struct {
-	ProductID    string `json:"product_id"`
-	ReviewsCount string `json:"reviews_count"`
-}
-
-type ListReviews struct {
-	AliHunterTop     []Review
-	AliHunterOrigin  []Review
-	AliExpressTop    []Review
-	AliExpressOrigin []Review
-}
-
-func UpdateJSONComparisonReview() error {
-	// get list of reports from report.json
-	var reports []Report
-	data, err := os.ReadFile("report.json")
-	if err != nil {
-		return fmt.Errorf("failed to read report.json file: %w", err)
-	}
-	if err := json.Unmarshal(data, &reports); err != nil {
-		return fmt.Errorf("failed to unmarshal report.json file: %w", err)
-	}
-
-	// update report.json, on each report with reviews count
-	for i := range reports { // Use index to modify the actual slice element
-		for j := range reports[i].AliHunterTop {
-			productID := reports[i].AliHunterTop[j].ProductID
-			count, err := getReviewsCount(productID)
-			if err != nil {
-				fmt.Printf("failed to get reviews count for AliHunter product %s: %v\n", productID, err)
-			}
-			reports[i].AliHunterTop[j].TotalReview = count
-		}
-		for j := range reports[i].AliHunterOrigin {
-			productID := reports[i].AliHunterOrigin[j].ProductID
-			count, err := getReviewsCount(productID)
-			if err != nil {
-				fmt.Printf("failed to get reviews count for AliHunter product %s: %v\n", productID, err)
-			}
-			reports[i].AliHunterOrigin[j].TotalReview = count
-		}
-		for j := range reports[i].AliExpressTop {
-			productID := reports[i].AliExpressTop[j].ID
-			count, err := getReviewsCount(productID)
-			if err != nil {
-				fmt.Printf("failed to get reviews count for AliExpress product %s: %v\n", productID, err)
-			}
-			reports[i].AliExpressTop[j].TotalReview = count
-		}
-		for j := range reports[i].AliExpressOrigin {
-			productID := reports[i].AliExpressOrigin[j].ID
-			count, err := getReviewsCount(productID)
-			if err != nil {
-				fmt.Printf("failed to get reviews count for AliExpress product %s: %v\n", productID, err)
-			}
-			reports[i].AliExpressOrigin[j].TotalReview = count
-		}
-	}
-
-	// write back to report.json
-	updatedData, err := json.MarshalIndent(reports, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated reports to json: %w", err)
-	}
-	if err := os.WriteFile("report.json", updatedData, 0644); err != nil {
-		return fmt.Errorf("failed to write updated json file: %w", err)
-	}
-
-	return nil
-}
-
 type getReviewsCountResponse struct {
 	Data struct {
 		TotalNum int `json:"totalNum"`
 	} `json:"data"`
 }
 
-func getReviewsCount(productID string) (string, error) {
+func GetReviewsCount(productID string) (string, error) {
 	serviceURL := fmt.Sprintf("https://feedback.aliexpress.com/pc/searchEvaluation.do?productId=%s&page=1", productID)
 
 	req, err := http.NewRequest(http.MethodGet, serviceURL, nil)

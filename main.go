@@ -18,17 +18,7 @@ func main() {
 	// Parse command-line flags
 	filePath := flag.String("local", "./docs/suggest_products.json", "path to local JSON file with RapidAPI product suggestions")
 	htmlFlag := flag.Bool("html", false, "generate HTML report")
-	reviewFlag := flag.Bool("review", false, "generate review report")
 	flag.Parse()
-
-	if *reviewFlag {
-		fmt.Println("🌶️ Querying review for each product")
-
-		if err := report.UpdateJSONComparisonReview(); err != nil {
-			log.Fatalf("failed to generate JSON review: %v", err)
-		}
-		return
-	}
 
 	// Generates an interactive HTML comparison report: only run on htmlFlag set to true
 	if *htmlFlag {
@@ -46,7 +36,7 @@ func main() {
 			log.Fatalf("failed to generate report: %v", err)
 		}
 
-		fmt.Println("⭐ Report successfully generated and saved to:", "report.html")
+		fmt.Println("⭐ Report successfully generated and saved to report.html")
 		return
 	}
 
@@ -78,7 +68,7 @@ func main() {
 
 	results := make([]result, total)
 	resultsChan := make(chan result, total)
-	sem := make(chan struct{}, 7) // semaphore limit to 7 concurrent requests, not to overwhelm the APIs
+	sem := make(chan struct{}, 7) // semaphore limit to 7 concurrent requests, not to overwhelm the APIs, why 7? cuz I like it =))
 	var wg sync.WaitGroup
 
 	// Use a global index counter
@@ -107,13 +97,29 @@ func main() {
 					defer innerWg.Done()
 					products, originals, err := alihunter.AliHunterSearchByImage(prod.ImageURL)
 					if err != nil {
-						log.Printf("AliHunter failed for %d: %v\n", prod.ProductID, err)
+						log.Printf("aliHunter failed for %d: %v\n", prod.ProductID, err)
 						aliHunterProducts = []model.AliHunterProduct{}
 						aliHunterOrigin = []model.AliHunterProduct{}
-					} else {
+					} else { // query total reviews for each product
+						for i := range products {
+							count, err := report.GetReviewsCount(products[i].ProductID)
+							if err != nil {
+								log.Printf("failed to get reviews count for aliHunter product %s: %v\n", products[i].ProductID, err)
+							}
+							products[i].TotalReview = count
+						}
+						for i := range originals {
+							count, err := report.GetReviewsCount(originals[i].ProductID)
+							if err != nil {
+								log.Printf("failed to get reviews count for aliHunter product %s: %v\n", originals[i].ProductID, err)
+							}
+							originals[i].TotalReview = count
+						}
+
 						aliHunterProducts = products
 						aliHunterOrigin = originals
 					}
+
 				}()
 
 				// Fetch AliExpress
@@ -121,10 +127,25 @@ func main() {
 					defer innerWg.Done()
 					products, originals, err := rapidapi.AliExpressSearchByImage(prod.ImageURL)
 					if err != nil {
-						log.Printf("AliExpress failed for %d: %v\n", prod.ProductID, err)
+						log.Printf("aliExpress failed for %d: %v\n", prod.ProductID, err)
 						aliexpressProducts = []model.AliExpressProduct{}
 						aliexpressOrigin = []model.AliExpressProduct{}
 					} else {
+						for i := range products {
+							count, err := report.GetReviewsCount(products[i].ProductID)
+							if err != nil {
+								log.Printf("failed to get reviews count for aliExpress product %s: %v\n", products[i].ProductID, err)
+							}
+							products[i].TotalReview = count
+						}
+						for i := range originals {
+							count, err := report.GetReviewsCount(originals[i].ProductID)
+							if err != nil {
+								log.Printf("failed to get reviews count for AliExpress product %s: %v\n", originals[i].ProductID, err)
+							}
+							originals[i].TotalReview = count
+						}
+
 						aliexpressProducts = products
 						aliexpressOrigin = originals
 					}

@@ -30,15 +30,15 @@ type ResultListSearchByImage struct {
 }
 
 type AliExpressProduct struct {
-	ID            string  // Product ID
-	URL           string  // Product URL
-	Title         string  // Product title
-	ImageURL      string  // Main product image URL
-	AvgRatingStar float64 // Average rating (0-5)
-	Volume        int64   // Sales volume
-	SalePrice     float64 // Current sale price
-	OriginalPrice float64 // Original price
-	TotalReview   string  `json:"totalreview"`
+	ProductID     string  `json:"product_id"`
+	URL           string  `json:"url"`
+	Title         string  `json:"title"`
+	ImageURL      string  `json:"image_url"`
+	AvgRatingStar float64 `json:"avg_rating_star"`
+	Volume        int64   `json:"volume"`
+	SalePrice     float64 `json:"sale_price"`     // Current sale price
+	OriginalPrice float64 `json:"original_price"` // Original price
+	TotalReview   string  `json:"total_review"`
 	Matching      bool    `json:"matching"` // Whether the product is matching
 	Similar       bool    `json:"similar"`  // Whether the product is similar
 }
@@ -67,33 +67,6 @@ type AliHunterProduct struct {
 	TotalReview             string `json:"total_review"`
 	Matching                bool   `json:"matching"`
 	Similar                 bool   `json:"similar"`
-}
-
-type RapidapiResponse struct {
-	ID        string            `json:"_id"`
-	CreatedAt string            `json:"created_at"`
-	ImageURL  string            `json:"image_url"`
-	JobID     string            `json:"job_id"`
-	ProductID string            `json:"product_id"`
-	Products  []RapidapiProduct `json:"products"`
-	ShopID    string            `json:"shop_id"`
-	Status    string            `json:"status"`
-	UpdatedAt string            `json:"updated_at"`
-}
-
-type RapidapiProduct struct {
-	Avgstar             float32 `json:"avgstar"`
-	Platform            string  `json:"platform"`
-	ProductID           string  `json:"productid"`
-	ProductMainImageURL string  `json:"productmainimageurl"`
-	ProductTitle        string  `json:"producttitle"`
-	ProductURL          string  `json:"producturl"`
-	Sale                int     `json:"sale"`
-	TargetOriginalPrice string  `json:"targetoriginalprice"`
-	TargetSalePrice     string  `json:"targetsaleprice"`
-	TotalReview         string  `json:"totalreview"`
-	Type                string  `json:"type"`
-	Matching            bool    `json:"matching"`
 }
 
 type ShopGroup struct {

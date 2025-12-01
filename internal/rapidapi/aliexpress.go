@@ -63,7 +63,7 @@ func AliExpressSearchByImage(image string) ([]model.AliExpressProduct, []model.A
 		}
 
 		product := model.AliExpressProduct{
-			ID:            item.ItemID,
+			ProductID:     item.ItemID,
 			URL:           item.ItemURL,
 			Title:         item.Title,
 			ImageURL:      item.Image,

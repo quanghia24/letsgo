@@ -181,9 +181,9 @@
               {{end}}
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.ProductURL}}" target="_blank">{{$p.ProductTitle}}</a>
-                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
-                  <div><strong class="price-red">{{if $p.TargetSalePrice}}{{$p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>| <strong>{{if $p.AvgStar}}{{printf "%.1f" $p.AvgStar}}{{else}}-{{end}} ⭐</strong></div>
+                <div><strong class="price-red">{{if $p.TargetSalePrice}}{{$p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
+                <div class="text-sm text-gray-600 flex flex-row items-center gap-2">
+                  <div><strong>{{if $p.AvgStar}}{{printf "%.1f" $p.AvgStar}}{{else}}-{{end}} ⭐</strong></div>
                   <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}} ratings)</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
@@ -215,9 +215,9 @@
 
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.ProductDetailURL}}" target="_blank">{{$p.ProductTitle}}</a>
-                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
-                  <div><strong class="price-red">{{if $p.TargetSalePrice}}{{formatPrice $p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>| <strong>{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</strong></div>
+                <div><strong class="price-red">{{if $p.TargetSalePrice}}{{formatPrice $p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
+                <div class="text-sm text-gray-600 flex flex-row items-center gap-2">
+                  <div><strong>{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</strong></div>
                   <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
@@ -246,9 +246,9 @@
 
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.ProductDetailURL}}" target="_blank">{{$p.ProductTitle}}</a>
-                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
-                  <div><strong class="price-red">{{if $p.TargetSalePrice}}{{formatPrice $p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>| <strong>{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</strong></div>
+                <div><strong class="price-red">{{if $p.TargetSalePrice}}{{formatPrice $p.TargetSalePrice}}{{else}}N/A{{end}}</strong></div>
+                <div class="text-sm text-gray-600 flex flex-row items-center gap-2">
+                  <div><strong>{{if $p.EvaluateRate}}{{$p.EvaluateRate}}{{else}}0{{end}} ⭐</strong></div>
                   <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
@@ -280,9 +280,9 @@
 
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.URL}}" target="_blank">{{$p.Title}}</a>
-                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
-                  <div><strong class="price-red">{{if $p.SalePrice}}${{printf "%.2f" $p.SalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>| <strong>{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}} ⭐</strong></div>
+                <div><strong class="price-red">{{if $p.SalePrice}}${{printf "%.2f" $p.SalePrice}}{{else}}N/A{{end}}</strong></div>
+                <div class="text-sm text-gray-600 flex flex-row items-center gap-2">
+                  <div><strong>{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}} ⭐</strong></div>
                   <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
@@ -311,9 +311,9 @@
 
               <div>
                 <a class="font-medium text-gray-900 mt-2 line-clamp-2" href="{{$p.URL}}" target="_blank">{{$p.Title}}</a>
-                <div class="mt-2 text-sm text-gray-600 flex flex-row items-center gap-2">
-                  <div><strong class="price-red">{{if $p.SalePrice}}${{printf "%.2f" $p.SalePrice}}{{else}}N/A{{end}}</strong></div>
-                  <div>| <strong>{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}} ⭐</strong></div>
+                <div><strong class="price-red">{{if $p.SalePrice}}${{printf "%.2f" $p.SalePrice}}{{else}}N/A{{end}}</strong></div>
+                <div class="text-sm text-gray-600 flex flex-row items-center gap-2">
+                  <div><strong>{{if $p.AvgRatingStar}}{{printf "%.1f" $p.AvgRatingStar}}{{else}}0{{end}} ⭐</strong></div>
                   <div>({{if $p.TotalReview}}{{$p.TotalReview}}{{else}}0{{end}})</div>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
