@@ -22,18 +22,16 @@ go run . -html true
 
 ## 📁 Project Structure
 
-```text
+```
 gofun/
-├── cmd/main.go                           # CLI entry point with concurrent processing
-├── configs/rapidapi.go                   # API configuration management
+├── main.go                     # CLI entry point with concurrent processing
 ├── internal/
-│   ├── alihunter/alihunter.go           # AliHunter API client
-│   ├── rapidapi/aliexpress.go           # AliExpress/RapidAPI client
-│   ├── model/models.go                  # Data structures & domain models
-│   ├── report/report.go                 # Report generation & review fetching
-│   └── templates/report.tmpl            # HTML template with JavaScript
-└── docs/
-    └── README.md                        # Documentation
+│   ├── alihunter/alihunter.go  # AliHunter API client
+│   ├── rapidapi/aliexpress.go  # AliExpress/RapidAPI client
+│   ├── model/models.go         # Data structures
+│   ├── report/report.go        # Report generation & review fetching
+│   └── config/rapidapi.go      # API configuration
+└── templates/report.tmpl       # HTML template with JavaScript
 ```
 
 ## 🔄 Command Options
@@ -47,7 +45,7 @@ gofun/
 
 ### Data Generation Phase
 
-```text
+```Text
 Input JSON → Concurrent API Calls → Review Fetching → JSON Report
      ↓              ↓                     ↓              ↓
 Products → [AliHunter + AliExpress] → Review Counts → report.json
@@ -61,5 +59,3 @@ Products → [AliHunter + AliExpress] → Review Counts → report.json
 2. **Visualize**: `go run . -html true` → Creates `report.html` for analysis
 3. **Analyze**: Open browser → Mark products → Export selections
 4. **Share**: Send exported JSON + HTML
-
-<!-- Finding:     aws_secret="AKIAIMNOJVGFDXXXE4OA" -->

@@ -64,7 +64,7 @@ func GenerateHTMLReport(reports []Report, outDir string) error {
 		ComparisonsJSON: string(comparisonsJSON),
 	}
 
-	tmplPath := "./templates/report.tmpl"
+	tmplPath := "./internal/templates/report.tmpl"
 	// register template functions
 	funcMap := template.FuncMap{
 		"formatPrice": formatPrice,

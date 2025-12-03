@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 
-	"github.com/quanghia24/letsgo/internal/config"
+	"github.com/quanghia24/letsgo/configs"
 	"github.com/quanghia24/letsgo/internal/model"
 )
 
@@ -17,27 +18,35 @@ func AliExpressSearchByImage(image string) ([]model.AliExpressProduct, []model.A
 		return nil, nil, fmt.Errorf("image URL is empty")
 	}
 
-	serviceURL := fmt.Sprintf("https://%s/item_search_image?sort=default&catId=0&imgUrl=%s", config.GetRapidAPIConfig().Host, image)
+	// URL encode the image parameter to handle special characters
+	encodedImage := url.QueryEscape(image)
+	serviceURL := fmt.Sprintf("https://%s/item_search_image?sort=default&catId=0&imgUrl=%s", configs.GetRapidAPIConfig().Host, encodedImage)
+
 	req, err := http.NewRequest(http.MethodGet, serviceURL, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-RapidAPI-Key", config.GetRapidAPIConfig().APIKey)
-	req.Header.Set("X-RapidAPI-Host", config.GetRapidAPIConfig().Host)
+	req.Header.Set("X-RapidAPI-Key", configs.GetRapidAPIConfig().APIKey)
+	req.Header.Set("X-RapidAPI-Host", configs.GetRapidAPIConfig().Host)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal("failed to perform request")
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to perform request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	// Check HTTP status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, resp.Status)
+	}
+
 	var data model.AliExpressSearchByImageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		log.Fatal("failed to decode response body")
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to decode response body: %w", err)
 	}
+
+	// Debug: log the response for troubleshooting
+	log.Printf("AliExpress API Response - URL: %s, Results count: %d", serviceURL, len(data.Result.ResultList))
 
 	var products []model.AliExpressProduct
 	var originProducts []model.AliExpressProduct
@@ -75,11 +84,10 @@ func AliExpressSearchByImage(image string) ([]model.AliExpressProduct, []model.A
 
 		originProducts = append(originProducts, product)
 
-		if item.AverageStarRate == nil {
-			continue
+		// Only add to filtered products if it has ratings
+		if item.AverageStarRate != nil {
+			products = append(products, product)
 		}
-
-		products = append(products, product)
 	}
 
 	// get max 3 products
